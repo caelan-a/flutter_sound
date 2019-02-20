@@ -11,6 +11,7 @@
 double subscriptionDuration = 0.01;
 double dbPeakInterval = 0.8;
 bool shouldProcessDbLevel = false;
+bool useEarpiece = false; // Added
 FlutterMethodChannel* _channel;
 
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag {

@@ -17,6 +17,7 @@ public class AudioModel {
   private Runnable dbLevelTicker;
   private long recordTime = 0;
   public final double micLevelBase = 2700;
+  boolean useEarpiece = false;
 
   private MediaPlayer mediaPlayer;
   private long playTime = 0;
@@ -64,17 +65,18 @@ public class AudioModel {
     this.audioManager = audioManager; //
     if(audioManager != null) {
       mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC); //
+      if(useEarpiece == true) {
+        this.audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        this.audioManager.setSpeakerphoneOn(false);
+      } else {
+        this.audioManager.setMode(AudioManager.MODE_NORMAL);
+        this.audioManager.setSpeakerphoneOn(true);  
+      }
     }
   }
 
   public void useEarpiece(boolean use) {
-    if(use) {
-      this.audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-      this.audioManager.setSpeakerphoneOn(false);
-    } else {
-      this.audioManager.setMode(AudioManager.MODE_NORMAL);
-      this.audioManager.setSpeakerphoneOn(true);  
-    }
+    this.useEarpiece = use;
   }
 
   public long getPlayTime() {
