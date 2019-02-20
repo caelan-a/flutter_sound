@@ -25,11 +25,16 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
+import android.content.Context;
+import android.media.AudioManager;
+
 /** FlutterSoundPlugin */
-public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.RequestPermissionsResultListener, AudioInterface{ ;
+public class FlutterSoundPlugin
+    implements MethodCallHandler, PluginRegistry.RequestPermissionsResultListener, AudioInterface {
+  ;
   final static String TAG = "FlutterSoundPlugin";
   final static String RECORD_STREAM = "com.dooboolab.fluttersound/record";
-  final static String PLAY_STREAM= "com.dooboolab.fluttersound/play";
+  final static String PLAY_STREAM = "com.dooboolab.fluttersound/play";
 
   private static final String ERR_UNKNOWN = "ERR_UNKNOWN";
   private static final String ERR_PLAYER_IS_NULL = "ERR_PLAYER_IS_NULL";
@@ -37,13 +42,13 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
   private static final String ERR_RECORDER_IS_NULL = "ERR_RECORDER_IS_NULL";
   private static final String ERR_RECORDER_IS_RECORDING = "ERR_RECORDER_IS_RECORDING";
 
-
   private static Registrar reg;
   final private AudioModel model = new AudioModel();
   private Timer mTimer = new Timer();
   final private Handler recordHandler = new Handler();
   final private Handler dbPeakLevelHandler = new Handler();
   private static MethodChannel channel;
+  private Context context;
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
@@ -56,64 +61,75 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
   public void onMethodCall(MethodCall call, Result result) {
     String path = call.argument("path");
     switch (call.method) {
-      case "getPlatformVersion":
-        result.success("Android " + android.os.Build.VERSION.RELEASE);
-        break;
-      case "startRecorder":
-        int sampleRate = call.argument("sampleRate");
-        int numChannels = call.argument("numChannels");
-        this.startRecorder(numChannels, sampleRate, path, result);
-        break;
-      case "stopRecorder":
-        this.stopRecorder(result);
-        break;
-      case "startPlayer":
-        this.startPlayer(path, result);
-        break;
-      case "stopPlayer":
-        this.stopPlayer(result);
-        break;
-      case "pausePlayer":
-        this.pausePlayer(result);
-        break;
-      case "resumePlayer":
-        this.resumePlayer(result);
-        break;
-      case "seekToPlayer":
-        int sec = call.argument("sec");
-        this.seekToPlayer(sec, result);
-        break;
-      case "setVolume":
-        double volume = call.argument("volume");
-        this.setVolume(volume, result);
-        break;
-      case "setDbPeakLevelUpdate":
-        double intervalInSecs = call.argument("intervalInSecs");
-        this.setDbPeakLevelUpdate(intervalInSecs, result);
-        break;
-      case "setDbLevelEnabled":
-        boolean enabled = call.argument("enabled");
-        this.setDbLevelEnabled(enabled, result);
-        break;
-      case "setSubscriptionDuration":
-        if (call.argument("sec") == null) return;
-        double duration = call.argument("sec");
-        this.setSubscriptionDuration(duration, result);
-        break;
-      default:
-        result.notImplemented();
-        break;
+    case "useEarpiece":
+      boolean use = call.argument("use");
+      this.useEarpiece(use, result);
+      result.success(null);
+      break;
+    case "getPlatformVersion":
+      result.success("Android " + android.os.Build.VERSION.RELEASE);
+      break;
+    case "startRecorder":
+      int sampleRate = call.argument("sampleRate");
+      int numChannels = call.argument("numChannels");
+      this.startRecorder(numChannels, sampleRate, path, result);
+      break;
+    case "stopRecorder":
+      this.stopRecorder(result);
+      break;
+    case "startPlayer":
+      this.startPlayer(path, result);
+      break;
+    case "stopPlayer":
+      this.stopPlayer(result);
+      break;
+    case "pausePlayer":
+      this.pausePlayer(result);
+      break;
+    case "resumePlayer":
+      this.resumePlayer(result);
+      break;
+    case "seekToPlayer":
+      int sec = call.argument("sec");
+      this.seekToPlayer(sec, result);
+      break;
+    case "setVolume":
+      double volume = call.argument("volume");
+      this.setVolume(volume, result);
+      break;
+    case "setDbPeakLevelUpdate":
+      double intervalInSecs = call.argument("intervalInSecs");
+      this.setDbPeakLevelUpdate(intervalInSecs, result);
+      break;
+    case "setDbLevelEnabled":
+      boolean enabled = call.argument("enabled");
+      this.setDbLevelEnabled(enabled, result);
+      break;
+    case "setSubscriptionDuration":
+      if (call.argument("sec") == null)
+        return;
+      double duration = call.argument("sec");
+      this.setSubscriptionDuration(duration, result);
+      break;
+    default:
+      result.notImplemented();
+      break;
     }
+  }
+
+  @Override
+  public void useEarpiece(boolean use, MethodChannel.Result result) {
+    this.model.useEarpiece(use);
   }
 
   @Override
   public boolean onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
     final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     switch (requestCode) {
-      case REQUEST_RECORD_AUDIO_PERMISSION:
-        if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
-          return true;
-        break;
+    case REQUEST_RECORD_AUDIO_PERMISSION:
+      if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
+        return true;
+      break;
     }
     return false;
   }
@@ -121,15 +137,13 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
   @Override
   public void startRecorder(int numChannels, int sampleRate, String path, final Result result) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      if (
-          reg.activity().checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
-              || reg.activity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-          ) {
-        reg.activity().requestPermissions(new String[]{
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        }, 0);
-        result.error(TAG, "NO PERMISSION GRANTED", Manifest.permission.RECORD_AUDIO + " or " + Manifest.permission.WRITE_EXTERNAL_STORAGE);
+      if (reg.activity().checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+          || reg.activity()
+              .checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        reg.activity().requestPermissions(
+            new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE, }, 0);
+        result.error(TAG, "NO PERMISSION GRANTED",
+            Manifest.permission.RECORD_AUDIO + " or " + Manifest.permission.WRITE_EXTERNAL_STORAGE);
         return;
       }
     }
@@ -162,12 +176,12 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
         public void run() {
 
           long time = SystemClock.elapsedRealtime() - systemTime;
-//          Log.d(TAG, "elapsedTime: " + SystemClock.elapsedRealtime());
-//          Log.d(TAG, "time: " + time);
+          // Log.d(TAG, "elapsedTime: " + SystemClock.elapsedRealtime());
+          // Log.d(TAG, "time: " + time);
 
-//          DateFormat format = new SimpleDateFormat("mm:ss:SS", Locale.US);
-//          String displayTime = format.format(time);
-//          model.setRecordTime(time);
+          // DateFormat format = new SimpleDateFormat("mm:ss:SS", Locale.US);
+          // String displayTime = format.format(time);
+          // model.setRecordTime(time);
           try {
             JSONObject json = new JSONObject();
             json.put("current_position", String.valueOf(time));
@@ -180,16 +194,17 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
       });
       recordHandler.post(this.model.getRecorderTicker());
 
-      if(this.model.shouldProcessDbLevel) {
+      if (this.model.shouldProcessDbLevel) {
         dbPeakLevelHandler.removeCallbacksAndMessages(null);
         this.model.setDbLevelTicker(new Runnable() {
           @Override
           public void run() {
-            //int ratio = model.getMediaRecorder().getMaxAmplitude() / micBase;
+            // int ratio = model.getMediaRecorder().getMaxAmplitude() / micBase;
             double dbLevel = 20 * Math.log10(model.getMediaRecorder().getMaxAmplitude() / model.micLevelBase);
             double normalizedDbLevel = Math.min(Math.pow(10, dbLevel / 20.0) * 120.0, 120);
             channel.invokeMethod("updateDbPeakProgress", normalizedDbLevel);
-            dbPeakLevelHandler.postDelayed(model.getDbLevelTicker(), (FlutterSoundPlugin.this.model.peakLevelUpdateMillis));
+            dbPeakLevelHandler.postDelayed(model.getDbLevelTicker(),
+                (FlutterSoundPlugin.this.model.peakLevelUpdateMillis));
           }
         });
         dbPeakLevelHandler.post(this.model.getDbLevelTicker());
@@ -232,7 +247,8 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
       result.success("player is already running.");
       return;
     } else {
-      this.model.setMediaPlayer(new MediaPlayer());
+      this.model.setMediaPlayer(new MediaPlayer(),
+          (AudioManager) reg.context().getApplicationContext().getSystemService(Context.AUDIO_SERVICE));
     }
     mTimer = new Timer();
 
@@ -295,7 +311,7 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
           mTimer.cancel();
           mp.stop();
           mp.release();
-          model.setMediaPlayer(null);
+          model.setMediaPlayer(null, null);
         }
       });
       this.model.getMediaPlayer().prepare();
@@ -317,7 +333,7 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
     try {
       this.model.getMediaPlayer().stop();
       this.model.getMediaPlayer().release();
-      this.model.setMediaPlayer(null);
+      this.model.setMediaPlayer(null, null);
       result.success("stopped player.");
     } catch (Exception e) {
       Log.e(TAG, "stopPlay exception: " + e.getMessage());

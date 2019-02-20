@@ -16,6 +16,12 @@ class FlutterSound {
   bool _isRecording = false;
   bool _isPlaying = false;
 
+  /// Set whether to use earpiece or not
+  Future<void> useEarpiece(bool use) async => await _channel.invokeMethod('useEarpiece', <String, dynamic>{
+        'use': use
+      });
+
+
   Future<String> setSubscriptionDuration(double sec) async {
     String result = await _channel
         .invokeMethod('setSubscriptionDuration', <String, dynamic>{

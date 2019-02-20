@@ -6,6 +6,7 @@ interface AudioInterface {
   void startRecorder(int numChannels, int sampleRate, String path, MethodChannel.Result result);
   void stopRecorder(MethodChannel.Result result);
   void startPlayer(String path, MethodChannel.Result result);
+  void useEarpiece(boolean use, MethodChannel.Result result);
   void stopPlayer(MethodChannel.Result result);
   void pausePlayer(MethodChannel.Result result);
   void resumePlayer(MethodChannel.Result result);

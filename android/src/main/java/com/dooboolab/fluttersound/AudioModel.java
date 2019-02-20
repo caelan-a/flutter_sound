@@ -2,6 +2,8 @@ package com.dooboolab.fluttersound;
 
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.media.AudioManager;
+
 import android.os.Environment;
 
 public class AudioModel {
@@ -18,6 +20,8 @@ public class AudioModel {
 
   private MediaPlayer mediaPlayer;
   private long playTime = 0;
+
+  private AudioManager audioManager;
 
   public MediaRecorder getMediaRecorder() {
     return mediaRecorder;
@@ -55,8 +59,22 @@ public class AudioModel {
     return mediaPlayer;
   }
 
-  public void setMediaPlayer(MediaPlayer mediaPlayer) {
+  public void setMediaPlayer(MediaPlayer mediaPlayer, AudioManager audioManager) {
     this.mediaPlayer = mediaPlayer;
+    this.audioManager = audioManager; //
+    if(audioManager != null) {
+      mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC); //
+    }
+  }
+
+  public void useEarpiece(boolean use) {
+    if(use) {
+      this.audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+      this.audioManager.setSpeakerphoneOn(false);
+    } else {
+      this.audioManager.setMode(AudioManager.MODE_NORMAL);
+      this.audioManager.setSpeakerphoneOn(true);  
+    }
   }
 
   public long getPlayTime() {
