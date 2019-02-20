@@ -11,7 +11,7 @@
 double subscriptionDuration = 0.01;
 double dbPeakInterval = 0.8;
 bool shouldProcessDbLevel = false;
-bool useEarpiece = false; // Added
+BOOL shouldUseEarpiece = false; // Added
 FlutterMethodChannel* _channel;
 
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag {
@@ -131,6 +131,9 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
     NSNumber* sampleRate = (NSNumber*)call.arguments[@"sampleRate"];
     NSNumber* numChannels = (NSNumber*)call.arguments[@"numChannels"];
     [self startRecorder:path:numChannels:sampleRate result:result];
+  } else if ([@"useEarpiece" isEqualToString:call.method]) { //
+    BOOL use = (NSString*)call.arguments[@"use"];
+    [self useEarpiece:use result: result]
   } else if ([@"stopRecorder" isEqualToString:call.method]) {
     [self stopRecorder:result];
   } else if ([@"startPlayer" isEqualToString:call.method]) {
@@ -163,6 +166,10 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
   else {
     result(FlutterMethodNotImplemented);
   }
+}
+
+- (void)useEarpiece:(BOOL)use result: (FlutterResult)result { //
+  shouldUseEarpiece = use;
 }
 
 - (void)setSubscriptionDuration:(double)duration result: (FlutterResult)result {
@@ -283,6 +290,12 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
     [[AVAudioSession sharedInstance]
         setCategory: AVAudioSessionCategoryPlayback
         error: nil];
+
+    if (shouldUseEarpiece) {
+      [session  overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:&error];
+    } else {
+      [session  overrideOutputAudioPort:AVAudioSessionPortOverrideNone error:&error];
+    }    
 
     [audioPlayer play];
     [self startTimer];
