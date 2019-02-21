@@ -132,8 +132,8 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
     NSNumber* numChannels = (NSNumber*)call.arguments[@"numChannels"];
     [self startRecorder:path:numChannels:sampleRate result:result];
   } else if ([@"useEarpiece" isEqualToString:call.method]) { //
-    BOOL use = (NSString*)call.arguments[@"use"];
-    [self useEarpiece:use result: result]
+    BOOL use = (BOOL)call.arguments[@"use"];
+    [self useEarpiece:use result: result];
   } else if ([@"stopRecorder" isEqualToString:call.method]) {
     [self stopRecorder:result];
   } else if ([@"startPlayer" isEqualToString:call.method]) {
@@ -291,11 +291,13 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
         setCategory: AVAudioSessionCategoryPlayback
         error: nil];
 
+    AVAudioSession *session = [AVAudioSession sharedInstance];
     if (shouldUseEarpiece) {
-      [session  overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:&error];
+      [session setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
     } else {
-      [session  overrideOutputAudioPort:AVAudioSessionPortOverrideNone error:&error];
+      [session setCategory: AVAudioSessionCategoryPlayback error: nil];
     }    
+
 
     [audioPlayer play];
     [self startTimer];
